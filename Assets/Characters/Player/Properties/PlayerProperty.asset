@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4e6c5bf6313aa74a9d5c373d9c69350, type: 3}
+  m_Name: PlayerProperty
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerPropertyTemplate
+  Health_Max: 10000
+  Health_Current: 10000
+  Physical_Strength: 50
+  Physical_Defense: 10
+  Magic_Strength: 50
+  Magic_Defense: 10
+  Stamina_Max: 100
+  Stamina_Current: 100
+  Mana_Max: 100
+  Mana_Current: 100
+  Health_Regen: 0
+  Stamina_Regen: 2
+  Mana_Regen: 2
+  SwordSingle_Damage_Base: 100
+  SwordSingle_Damage_Multiplier: 0
+  SwordSingle_Stamina_Cost: 20
+  SwordSingle_Cooldown_Time: 2
+  SwordSingle_Crit_Chance: 0
+  SwordBlock_Block_Reduction: 80
+  SwordBlock_Stamina_Cost: 20
+  SwordBlock_Cooldown_Time: 2
+  SwordBlock_Perfect_Block_Chance: 50
+  SwordAOE_Damage_Base: 80
+  SwordAOE_Damage_Multiplier: 0
+  SwordAOE_Stamina_Cost: 40
+  SwordAOE_Cooldown_Time: 5
+  SwordAOE_Range: 1
+  SwordAOE_Count: 1
+  SpellSingle_Damage_Base: 100
+  SpellSingle_Damage_Multiplier: 0
+  SpellSingle_Mana_Cost: 20
+  SpellSingle_Cooldown_Time: 2
+  SpellSingle_Spell_Count: 1
+  SpellBlock_Block_Reduction: 80
+  SpellBlock_Mana_Cost: 20
+  SpellBlock_Cooldown_Time: 2
+  SpellBlock_Perfect_Block_Chance: 50
+  SpellAOE_Damage_Base: 80
+  SpellAOE_Damage_Multiplier: 0
+  SpellAOE_Mana_Cost: 40
+  SpellAOE_Cooldown_Time: 5
+  SpellAOE_Range: 1
+  SpellAOE_Duration: 1
