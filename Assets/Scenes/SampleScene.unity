@@ -580,6 +580,19 @@ MonoBehaviour:
   Magic_Defense: 20
   Enemy_Physical_Damage_Base: 100
   Enemy_Magic_Damage_Base: 100
+--- !u!114 &905774338
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 905774330}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8815b630a36ab24b82d4e80e648e25d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DamageOnEnemy
+  EnemyPropertyAsset: {fileID: 11400000, guid: 93d3cecc8e4d844459af323b2a5cc4fc, type: 2}
 --- !u!1 &996553446 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 121322, guid: 786959448521c3a4eb27bfc329dcb7e2, type: 3}
@@ -1891,6 +1904,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 5957032559986233536, guid: 2b16c98e45dd2a54f8082c757e25338b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 905774335}
+    - targetCorrespondingSourceObject: {fileID: 5957032559986233536, guid: 2b16c98e45dd2a54f8082c757e25338b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 905774338}
   m_SourcePrefab: {fileID: 100100000, guid: 2b16c98e45dd2a54f8082c757e25338b, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
