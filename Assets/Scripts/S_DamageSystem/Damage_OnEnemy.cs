@@ -1,9 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// 敌人受击结算：订阅技能触发事件，实现6种技能的伤害计算与结算
+/// 敌人受击结算：订阅技能命中事件，实现6种技能的伤害计算与结算
 /// </summary>
-public class DamageOnEnemy : DamageTemplate
+public class Damage_OnEnemy : DamageTemplate
 {
     // ===== Inspector 字段 =====
 
@@ -14,7 +14,6 @@ public class DamageOnEnemy : DamageTemplate
 
     // ===== 私有字段 =====
 
-    private PlayerPropertyTemplate m_PlayerProperty;
     private bool m_IsCriticalHit;
 
     // ===== 生命周期 =====
@@ -29,7 +28,11 @@ public class DamageOnEnemy : DamageTemplate
         var player = FindObjectOfType<PlayerController_Skills>();
         if (player != null)
         {
-            player.OnSkillTriggered += HandleSkillTriggered;
+            var skillFunctions = player.GetComponent<PlayerSkillFunctions>();
+            if (skillFunctions != null)
+            {
+                skillFunctions.OnSkillHit += HandleSkillHit;
+            }
         }
     }
 
@@ -38,34 +41,45 @@ public class DamageOnEnemy : DamageTemplate
         var player = FindObjectOfType<PlayerController_Skills>();
         if (player != null)
         {
-            player.OnSkillTriggered -= HandleSkillTriggered;
+            var skillFunctions = player.GetComponent<PlayerSkillFunctions>();
+            if (skillFunctions != null)
+            {
+                skillFunctions.OnSkillHit -= HandleSkillHit;
+            }
         }
     }
 
     // ===== 事件处理 =====
 
     /// <summary>
-    /// 处理技能触发事件
-    /// 注意：通知方应通过扩展事件传递 PlayerPropertyTemplate
+    /// 处理技能命中事件
     /// </summary>
-    private void HandleSkillTriggered(PlayerController_Skills.SelectionState state, int skillIndex)
+    private void HandleSkillHit(GameObject enemy, SkillType skillType, PlayerPropertyTemplate playerProp)
     {
-        // TODO: 通过扩展事件接收 playerProp 参数
-        // 当前临时方案：从 PlayerController_Skills 获取
-        var player = FindObjectOfType<PlayerController_Skills>();
-        m_PlayerProperty = player != null ? player.PlayerPropertyAsset : null;
-
-        if (EnemyProperty == null || m_PlayerProperty == null) return;
-
-        SkillType skillType = MapToSkillType(state, skillIndex);
+        if (EnemyProperty == null || playerProp == null) return;
 
         // 过滤格挡技能（不造成伤害）
         if (skillType == SkillType.SwordBlock || skillType == SkillType.SpellBlock)
             return;
 
-        float damage = CalculateDamageForSkill(skillType, m_PlayerProperty, EnemyProperty);
+        float damage = CalculateDamageForSkill(skillType, playerProp, EnemyProperty);
         SettleDamage(damage);
+
+        // ===== 调试打印 =====
+        string critTag = m_IsCriticalHit ? "【暴击！】" : "";
+        Debug.Log(
+            $"[伤害结算] 敌人: {enemy.name} | 技能: {skillType} | " +
+            $"伤害: {damage:F1} | 剩余血量: {EnemyProperty.Health_Current:F1} {critTag}"
+        );
+
+        // 通知调试显示
+        OnDamageDebug?.Invoke(enemy.name, skillType.ToString(), damage, m_IsCriticalHit, EnemyProperty.Health_Current);
     }
+
+    /// <summary>
+    /// 伤害调试事件，供 PlayerSkillFunctions 订阅用于屏幕显示
+    /// </summary>
+    public System.Action<string, string, float, bool, float> OnDamageDebug;
 
     // ===== 技能伤害计算 =====
 
@@ -85,35 +99,6 @@ public class DamageOnEnemy : DamageTemplate
     }
 
     // ===== 辅助方法 =====
-
-    /// <summary>
-    /// 将 SelectionState + skillIndex 映射为 SkillType
-    /// </summary>
-    private SkillType MapToSkillType(PlayerController_Skills.SelectionState state, int skillIndex)
-    {
-        if (state == PlayerController_Skills.SelectionState.LeftHold)
-        {
-            return skillIndex switch
-            {
-                0 => SkillType.SwordSingle,
-                1 => SkillType.SwordBlock,
-                2 => SkillType.SwordAOE,
-                _ => SkillType.SwordSingle
-            };
-        }
-        else if (state == PlayerController_Skills.SelectionState.RightHold)
-        {
-            return skillIndex switch
-            {
-                0 => SkillType.SpellSingle,
-                1 => SkillType.SpellBlock,
-                2 => SkillType.SpellAOE,
-                _ => SkillType.SpellSingle
-            };
-        }
-
-        return SkillType.SwordSingle;
-    }
 
     /// <summary>
     /// 从 PlayerProperty 提取指定技能的基础伤害、倍率、暴击率

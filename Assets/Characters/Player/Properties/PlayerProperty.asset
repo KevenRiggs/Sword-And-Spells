@@ -26,10 +26,10 @@ MonoBehaviour:
   Stamina_Regen: 2
   Mana_Regen: 2
   SwordSingle_Damage_Base: 100
-  SwordSingle_Damage_Multiplier: 0
+  SwordSingle_Damage_Multiplier: 1
   SwordSingle_Stamina_Cost: 20
   SwordSingle_Cooldown_Time: 2
-  SwordSingle_Crit_Chance: 0
+  SwordSingle_Crit_Chance: 0.2
   SwordBlock_Block_Reduction: 80
   SwordBlock_Stamina_Cost: 20
   SwordBlock_Cooldown_Time: 2

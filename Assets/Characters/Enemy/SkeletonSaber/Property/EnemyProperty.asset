@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b63065c9a7abe10478ec2c0c330bc724, type: 3}
   m_Name: EnemyProperty
   m_EditorClassIdentifier: Assembly-CSharp::EnemyPropertyTemplate
-  Health_Max: 500
-  Health_Current: 500
+  Health_Max: 10000
+  Health_Current: 10000
   Physical_Strength: 100
   Physical_Defense: 20
   Magic_Strength: 0

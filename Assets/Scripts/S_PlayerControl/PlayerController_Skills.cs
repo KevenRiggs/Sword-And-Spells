@@ -277,14 +277,19 @@ public class PlayerController_Skills : MonoBehaviour
         if (m_DebugTimer <= 0f)
             return;
 
+        float x = Screen.width - 370f;
+        float y = 10f;
+        float boxW = 360f;
+        float boxH = 200f;
+
         // 背景半透明框
-        GUI.Box(new Rect(10, 10, 340, 200), "");
+        GUI.Box(new Rect(x, y, boxW, boxH), "");
 
         // 标题
         GUIStyle titleStyle = new GUIStyle(GUI.skin.label);
         titleStyle.fontStyle = FontStyle.Bold;
         titleStyle.fontSize = 14;
-        GUI.Label(new Rect(20, 14, 320, 20), "=== Skill Debug ===", titleStyle);
+        GUI.Label(new Rect(x + 10, y + 4, 340, 20), "=== Skill Debug ===", titleStyle);
 
         // 当前状态
         GUIStyle stateStyle = new GUIStyle(GUI.skin.label);
@@ -297,13 +302,13 @@ public class PlayerController_Skills : MonoBehaviour
         };
         stateStyle.normal.textColor = m_CurrentState == SelectionState.None ? Color.gray :
                                      (m_CurrentState == SelectionState.LeftHold ? Color.cyan : Color.yellow);
-        GUI.Label(new Rect(20, 38, 320, 20), "状态: " + stateStr, stateStyle);
+        GUI.Label(new Rect(x + 10, y + 28, 340, 20), "状态: " + stateStr, stateStyle);
 
         // 动画锁定状态
         GUIStyle lockStyle = new GUIStyle(GUI.skin.label);
         lockStyle.fontSize = 11;
         lockStyle.normal.textColor = m_IsAnimationPlaying ? Color.red : Color.green;
-        GUI.Label(new Rect(20, 56, 320, 16),
+        GUI.Label(new Rect(x + 10, y + 46, 340, 16),
             "动画: " + (m_IsAnimationPlaying ? "锁定中" : "可操作"), lockStyle);
 
         // 调试信息
@@ -311,8 +316,8 @@ public class PlayerController_Skills : MonoBehaviour
         {
             GUIStyle msgStyle = new GUIStyle(GUI.skin.label);
             msgStyle.fontSize = 12;
-            msgStyle.normal.textColor = new Color(0.3f, 1f, 0.3f); // lime green
-            GUI.Label(new Rect(20, 60, 320, 60), m_DebugMessage, msgStyle);
+            msgStyle.normal.textColor = new Color(0.3f, 1f, 0.3f);
+            GUI.Label(new Rect(x + 10, y + 60, 340, 60), m_DebugMessage, msgStyle);
         }
 
         // 冷却状态
@@ -320,16 +325,16 @@ public class PlayerController_Skills : MonoBehaviour
         cdStyle.fontSize = 11;
         cdStyle.normal.textColor = Color.white;
 
-        float yBase = m_DebugTimer > 0f ? 120f : 60f;
-        GUI.Label(new Rect(20, yBase, 160, 16), "--- LeftHold 冷却 ---", cdStyle);
-        DrawCooldownRow(0, "Q", LeftHold_Q_Cooldown, 20,  yBase + 18, cdStyle);
-        DrawCooldownRow(1, "E", LeftHold_E_Cooldown, 20,  yBase + 36, cdStyle);
-        DrawCooldownRow(2, "R", LeftHold_R_Cooldown, 20,  yBase + 54, cdStyle);
+        float cdY = y + 120f;
+        GUI.Label(new Rect(x + 10, cdY, 160, 16), "--- LeftHold 冷却 ---", cdStyle);
+        DrawCooldownRow(0, "Q", LeftHold_Q_Cooldown, x + 10,  cdY + 18, cdStyle);
+        DrawCooldownRow(1, "E", LeftHold_E_Cooldown, x + 10,  cdY + 36, cdStyle);
+        DrawCooldownRow(2, "R", LeftHold_R_Cooldown, x + 10,  cdY + 54, cdStyle);
 
-        GUI.Label(new Rect(180, yBase, 160, 16), "--- RightHold 冷却 ---", cdStyle);
-        DrawCooldownRow(3, "Q", RightHold_Q_Cooldown, 180, yBase + 18, cdStyle);
-        DrawCooldownRow(4, "E", RightHold_E_Cooldown, 180, yBase + 36, cdStyle);
-        DrawCooldownRow(5, "R", RightHold_R_Cooldown, 180, yBase + 54, cdStyle);
+        GUI.Label(new Rect(x + 180, cdY, 160, 16), "--- RightHold 冷却 ---", cdStyle);
+        DrawCooldownRow(3, "Q", RightHold_Q_Cooldown, x + 180, cdY + 18, cdStyle);
+        DrawCooldownRow(4, "E", RightHold_E_Cooldown, x + 180, cdY + 36, cdStyle);
+        DrawCooldownRow(5, "R", RightHold_R_Cooldown, x + 180, cdY + 54, cdStyle);
     }
 
     void DrawCooldownRow(int slotIndex, string keyLabel, float maxCd, float x, float y, GUIStyle style)
