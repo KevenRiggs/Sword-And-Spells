@@ -41,10 +41,10 @@ MonoBehaviour:
   SwordAOE_Range: 1
   SwordAOE_Count: 1
   SpellSingle_Damage_Base: 100
-  SpellSingle_Damage_Multiplier: 0
+  SpellSingle_Damage_Multiplier: 1
   SpellSingle_Mana_Cost: 20
   SpellSingle_Cooldown_Time: 2
-  SpellSingle_Spell_Count: 1
+  SpellSingle_Spell_Count: 2
   SpellBlock_Block_Reduction: 80
   SpellBlock_Mana_Cost: 20
   SpellBlock_Cooldown_Time: 2

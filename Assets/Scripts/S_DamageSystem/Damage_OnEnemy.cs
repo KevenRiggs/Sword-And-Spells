@@ -15,37 +15,51 @@ public class Damage_OnEnemy : DamageTemplate
     // ===== 私有字段 =====
 
     private bool m_IsCriticalHit;
+    private PlayerController_Skills m_PlayerCtrl;
 
     // ===== 生命周期 =====
 
     private void Awake()
     {
         EnemyProperty = EnemyPropertyAsset;
+        m_PlayerCtrl = FindAnyObjectByType<PlayerController_Skills>();
     }
 
     private void OnEnable()
     {
-        var player = FindObjectOfType<PlayerController_Skills>();
-        if (player != null)
+        // 订阅 PlayerSkillFunctions 的直接命中事件（SwordQ 等扇形检测技能）
+        if (m_PlayerCtrl != null)
         {
-            var skillFunctions = player.GetComponent<PlayerSkillFunctions>();
+            var skillFunctions = m_PlayerCtrl.GetComponent<PlayerSkillFunctions>();
             if (skillFunctions != null)
             {
                 skillFunctions.OnSkillHit += HandleSkillHit;
             }
         }
+
+        // 订阅 Global_ProjectileManager 的弹射物命中事件（SpellQ 等弹射物技能）
+        if (Global_ProjectileManager.Instance != null)
+        {
+            Global_ProjectileManager.Instance.OnSkillHit += HandleSkillHit;
+        }
     }
 
     private void OnDisable()
     {
-        var player = FindObjectOfType<PlayerController_Skills>();
-        if (player != null)
+        // 取消订阅 PlayerSkillFunctions 的直接命中事件
+        if (m_PlayerCtrl != null)
         {
-            var skillFunctions = player.GetComponent<PlayerSkillFunctions>();
+            var skillFunctions = m_PlayerCtrl.GetComponent<PlayerSkillFunctions>();
             if (skillFunctions != null)
             {
                 skillFunctions.OnSkillHit -= HandleSkillHit;
             }
+        }
+
+        // 取消订阅 Global_ProjectileManager 的弹射物命中事件
+        if (Global_ProjectileManager.Instance != null)
+        {
+            Global_ProjectileManager.Instance.OnSkillHit -= HandleSkillHit;
         }
     }
 
@@ -56,6 +70,10 @@ public class Damage_OnEnemy : DamageTemplate
     /// </summary>
     private void HandleSkillHit(GameObject enemy, SkillType skillType, PlayerPropertyTemplate playerProp)
     {
+        // 校验：只有被命中的敌人才处理伤害
+        if (enemy != this.gameObject)
+            return;
+
         if (EnemyProperty == null || playerProp == null) return;
 
         // 过滤格挡技能（不造成伤害）

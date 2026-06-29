@@ -52,11 +52,11 @@
 
 ```
 PlayerController_Skills.OnSkillTriggered (LeftHold, 0)
-    → PlayerSkillFunctions.HandleSkillTriggered (预处理，当前仅打印调试信息)
+    → PlayerSkillFunctions.HandleSkillTriggered (预处理，记录调试信息)
         → [动画播放 Sword_Q]
             → [动画第 N 帧 Animation Event]
                 → OnSwordQHit()
-                    → 扇形检测
+                    → 扇形检测 (DetectNearestEnemyInFan)
                         → OnSkillHit(enemy, DamageTemplate.SkillType.SwordSingle, playerProp)
                             → Damage_OnEnemy.HandleSkillHit()
                                 → Damage_OnEnemy.SettleDamage()
@@ -67,9 +67,13 @@ PlayerController_Skills.OnSkillTriggered (LeftHold, 0)
 ```csharp
 // 技能命中事件（供 Damage_OnEnemy 订阅）
 public System.Action<GameObject, DamageTemplate.SkillType, PlayerPropertyTemplate> OnSkillHit;
-//   → GameObject           : 命中的敌人
-//   → DamageTemplate.SkillType : 命中的技能类型（用于伤害计算）
-//   → PlayerPropertyTemplate   : 玩家属性（从 PlayerController_Skills.PlayerPropertyAsset 获取，用于伤害计算）
+//   → GameObject                : 命中的敌人
+//   → DamageTemplate.SkillType  : 命中的技能类型（用于伤害计算）
+//   → PlayerPropertyTemplate    : 玩家属性（用于伤害计算）
+
+// 伤害结算调试事件（供 PlayerSkillFunctions 屏幕显示订阅）
+public System.Action<string, string, float, bool, float> OnDamageDebug;
+//   → 敌人名称 / 技能名称 / 伤害值 / 是否暴击 / 剩余血量
 
 // Animation Event 入口
 public void OnSwordQHit();
@@ -77,18 +81,110 @@ public void OnSwordQHit();
 
 ---
 
+## Spell 单体 Q 技能（SpellQ）✅ 设计中
+
+### 1. 发射原理
+
+在动画的第 N 帧（由 Animation Event 触发 `OnSpellQHit`）时，根据 `PlayerPropertyTemplate.SpellSingle_Spell_Count` 配置的数量，向角色朝向方向依次发射多个法球。
+
+### 2. 配置方式
+
+SpellQ 的弹射物参数不在 PlayerSkillFunctions Inspector 中配置，而是通过 **FlyingProjectileTemplate.asset** 配置：
+
+| 配置位置 | 字段 | 说明 |
+|---------|------|------|
+| `FlyingProjectileTemplate.asset` | `prefab` | 法球视觉 Prefab |
+| `FlyingProjectileTemplate.asset` | `speed` | 飞行速度（米/秒） |
+| `FlyingProjectileTemplate.asset` | `radius` | 碰撞体积半径 |
+| `FlyingProjectileTemplate.asset` | `maxLifetime` | 最大存活时间 |
+| `FlyingProjectileTemplate.asset` | `hitVFX` | 命中特效 Prefab（可选） |
+| `FlyingProjectileTemplate.asset` | `hitSFX` | 命中音效（可选） |
+| `PlayerSkillFunctions` Inspector | `SpellQ_Template` | 引用的 `.asset` |
+| `PlayerSkillFunctions` Inspector | `SpellQ_SpawnInterval` | 多球发射间隔（秒） |
+
+### 3. 多球发射逻辑
+
+```
+OnSpellQHit()
+    → 读取 PlayerPropertyAsset.SpellSingle_Spell_Count（配置的法球数量）
+    → 启动协程 SpellQ_LaunchLoop()
+        → for i in [0, count):
+            → 计算发射方向（玩家朝向，不偏移）
+            → 调用 Global_ProjectileManager.SpawnFlyingProjectile()
+            → 等待 SpellQ_SpawnInterval 秒
+```
+
+**间隔保证**：每发法球间隔 `SpellQ_SpawnInterval`（默认0.1秒），避免视觉重叠。
+
+### 4. 事件链
+
+```
+PlayerController_Skills.OnSkillTriggered (RightHold, 0)
+    → PlayerSkillFunctions.HandleSkillTriggered (预处理，记录调试信息)
+        → [动画播放 Spell_Q]
+            → [动画第 N 帧 Animation Event]
+                → OnSpellQHit()
+                    → [协程] 依次 Spawn 法球
+                        → [每发法球命中时]
+                            → Global_ProjectileManager.OnProjectileHit (特效/音效)
+                            → Global_ProjectileManager.OnSkillHit (内部转发)
+                                → Damage_OnEnemy.HandleSkillHit()
+                                    → Damage_OnEnemy.SettleDamage()
+```
+
+### 5. 与 Global_ProjectileManager 的协作
+
+| 职责方 | 职责 |
+|--------|------|
+| `PlayerSkillFunctions` | 管理发射节奏（多球间隔），通知管理器生成法球 |
+| `Global_ProjectileManager` | 接收生成请求，管理法球生命周期、移动、碰撞检测 |
+
+### 6. 扩展方向
+
+| 扩展方向 | 当前是否实现 | 如何扩展 |
+|---------|-------------|---------|
+| 穿透 | 否 | Global_ProjectileManager.UpdateFlyingProjectiles 不回收弹射物，继续飞 |
+| 追踪 | 否 | 在 FlyingProjectile.Update 中朝向目标计算方向 |
+| 弹跳 | 否 | 修改 direction 转向计算 |
+| 爆炸范围 | 否 | 命中时通知范围内所有敌人 |
+
+---
+
 ## 对接说明
 
-### PlayerSkillFunctions → Damage_OnEnemy
+### PlayerSkillFunctions → Global_ProjectileManager
 
-- `Damage_OnEnemy` 在 `OnEnable` 中通过 `player.GetComponent<PlayerSkillFunctions>()` 获取引用并订阅 `OnSkillHit`
-- 收到事件后，`Damage_OnEnemy` 直接用 `EnemyPropertyAsset`（自身 Awake 中已设置）进行伤害结算
-- 玩家属性（`PlayerPropertyAsset`）仍通过 `FindObjectOfType<PlayerController_Skills>()` 获取（待后续优化为事件参数传递）
+- `PlayerSkillFunctions` 在 `Start` 中通过 `FindAnyObjectByType<Global_ProjectileManager>()` 获取管理器引用并缓存
+- `OnSpellQHit` 调用 `m_ProjectileManager.SpawnFlyingProjectile()` 生成法球
+
+### Global_ProjectileManager → Damage_OnEnemy
+
+- `Global_ProjectileManager` 在 `Awake` 中单例化
+- `OnEnable` / `OnDisable` 中订阅/取消订阅 `Global_ProjectileManager.Instance.OnSkillHit`
+- 命中时，`Global_ProjectileManager` 内部同时触发：
+  - `OnProjectileHit` — 供特效/音效系统订阅
+  - `OnSkillHit`（internal）— 自动转发给 `Damage_OnEnemy.HandleSkillHit`
 
 ### EnemyLayer 配置
 
 - 必填字段：需要在 Inspector 中将 Enemy 层拖入 `EnemyLayer` 遮罩
 - 只有设置了 Enemy 层的物体才会被扇形检测命中
+
+---
+
+## 调试功能
+
+### 编辑器 Gizmos
+- `OnDrawGizmos`：始终绘制扇形检测范围（青色半透明）
+- `OnDrawGizmosSelected`：选中玩家时绘制高亮扇形（绿色）
+
+### 游戏视图调试
+- `OnPostRender`：命中检测时绘制球形调试图形（青色半透明，持续0.5秒）
+- `OnGUI`：屏幕显示调试面板，包含技能触发信息和伤害结算信息
+
+### 伤害结算调试
+- `Damage_OnEnemy` 触发 `OnDamageDebug` 事件
+- `PlayerSkillFunctions` 订阅该事件并在屏幕显示结算结果（伤害值、暴击标识、剩余血量）
 
 ---
 
@@ -98,10 +194,10 @@ public void OnSwordQHit();
 |------|---------|------|
 | SwordQ 单体 | ✅ 已实现 | 扇形单体 |
 | SwordE 格挡 | 未设计 | 格挡无伤害，逻辑待定 |
-| SwordR AOE | 未设计 | 扇形 → 多目标 |
-| SpellQ 单体 | 未设计 | 可能为射线或投射物 |
+| SwordR AOE | 未设计 | 扇形 → 多目标剑气 |
+| SpellQ 单体 | ✅ 已实现 | 多球弹射物 |
 | SpellE 格挡 | 未设计 |  |
-| SpellR AOE | 未设计 |  |
+| SpellR AOE | 未设计 | 地板范围技能 |
 
 ---
 
@@ -110,30 +206,59 @@ public void OnSwordQHit();
 ```csharp
 public class PlayerSkillFunctions : MonoBehaviour
 {
-    // Inspector
+    // ===== Inspector 字段 =====
+    // SwordQ
     public float SwordQ_Radius = 5f;
     public float SwordQ_Angle = 60f;
+
+    // SpellQ
+    public FlyingProjectileTemplate SpellQ_Template;  // 引用的 .asset
+    public float SpellQ_SpawnInterval = 0.1f;       // 发射间隔
+
     public LayerMask EnemyLayer;
 
-    // 私有
+    // ===== 私有字段 =====
     PlayerController_Skills m_PlayerCtrl;
     Transform m_PlayerTransform;
+    Global_ProjectileManager m_ProjectileManager;
 
-    // 事件
+    // ===== 事件 =====
     public System.Action<GameObject, DamageTemplate.SkillType, PlayerPropertyTemplate> OnSkillHit;
+    public System.Action<string, string, float, bool, float> OnDamageDebug;
 
-    // 生命周期
-    void Start() { m_PlayerCtrl = GetComponent<PlayerController_Skills>(); m_PlayerTransform = transform; }
-    void OnEnable() { m_PlayerCtrl.OnSkillTriggered += HandleSkillTriggered; }
-    void OnDisable() { m_PlayerCtrl.OnSkillTriggered -= HandleSkillTriggered; }
+    // ===== 生命周期 =====
+    void Start();
+    void OnEnable();
+    void OnDisable();
+    void Update();
 
-    // 事件处理（预处理，当前仅记录）
-    void HandleSkillTriggered(PlayerController_Skills.SelectionState state, int skillIndex) { }
+    // ===== 事件处理（预处理） =====
+    void HandleSkillTriggered(PlayerController_Skills.SelectionState state, int skillIndex);
 
-    // Animation Event 入口
-    public void OnSwordQHit() { SwordQ_Detect(); }
+    // ===== Animation Event 入口 =====
+    public void OnSwordQHit();
+    public void OnSpellQHit();
 
-    // 扇形检测
+    // ===== 扇形检测 =====
     GameObject DetectNearestEnemyInFan(Vector3 origin, Vector3 forward, float radius, float angle);
+
+    // ===== SpellQ 发射逻辑 =====
+    System.Collections.IEnumerator SpellQ_LaunchLoop(int count);
+
+    // ===== 调试辅助 =====
+    void SetDebugMessage(string msg);
+    void HandleDamageDebug(string enemyName, string skillName, float damage, bool isCrit, float remainingHp);
+    void OnGUI();
+
+    // ===== Gizmos =====
+    void OnDrawGizmos();
+    void OnDrawGizmosSelected();
+    void DrawFanGizmos(Vector3 origin, Vector3 forward, float radius, float angle, bool bright);
+    void DrawFanArcGizmos(Vector3 origin, Vector3 forward, float radius, float halfAngle, int segments);
+
+    // ===== 游戏视图绘制 =====
+    void DrawFanInGameView(Vector3 origin, Vector3 forward, float radius, float angle);
+    void OnPostRender();
+    void DrawWireSphere(Vector3 center, float radius, int latLines, int lonLines);
 }
 ```

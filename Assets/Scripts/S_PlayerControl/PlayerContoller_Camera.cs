@@ -110,7 +110,7 @@ public class PlayerContoller_Camera : MonoBehaviour
             CameraRef = GetComponentInChildren<Camera>();
 
         // 订阅技能系统事件
-        m_Skills = FindObjectOfType<PlayerController_Skills>();
+        m_Skills = FindAnyObjectByType<PlayerController_Skills>();
         if (m_Skills != null)
             m_Skills.OnSelectionStateChanged += OnSkillStateChanged;
     }

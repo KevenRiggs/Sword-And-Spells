@@ -15,6 +15,12 @@ public class PlayerSkillFunctions : MonoBehaviour
     [Tooltip("扇形角度（度）")]
     public float SwordQ_Angle = 60f;
 
+    [Header("SpellQ 配置")]
+    [Tooltip("法球弹射物模板（.asset）")]
+    public FlyingProjectileTemplate SpellQ_Template;
+    [Tooltip("多球发射间隔（秒）")]
+    public float SpellQ_SpawnInterval = 0.1f;
+
     [Header("引用")]
     [Tooltip("Enemy 层遮罩（拖入 Enemy 层）")]
     public LayerMask EnemyLayer;
@@ -24,6 +30,7 @@ public class PlayerSkillFunctions : MonoBehaviour
     PlayerController_Skills m_PlayerCtrl;
     Transform m_PlayerTransform;
     LineRenderer m_FanLineRenderer;
+    Global_ProjectileManager m_ProjectileManager;
 
     // ===== 调试信息 =====
     string m_DebugMessage = "";
@@ -50,6 +57,7 @@ public class PlayerSkillFunctions : MonoBehaviour
     {
         m_PlayerCtrl = GetComponent<PlayerController_Skills>();
         m_PlayerTransform = GetComponent<Transform>();
+        m_ProjectileManager = FindAnyObjectByType<Global_ProjectileManager>();
     }
 
     void OnEnable()
@@ -60,7 +68,7 @@ public class PlayerSkillFunctions : MonoBehaviour
         }
 
         // 订阅伤害结算调试事件
-        var damageOnEnemy = FindObjectOfType<Damage_OnEnemy>();
+        var damageOnEnemy = FindAnyObjectByType<Damage_OnEnemy>();
         if (damageOnEnemy != null)
         {
             damageOnEnemy.OnDamageDebug += HandleDamageDebug;
@@ -74,7 +82,7 @@ public class PlayerSkillFunctions : MonoBehaviour
             m_PlayerCtrl.OnSkillTriggered -= HandleSkillTriggered;
         }
 
-        var damageOnEnemy = FindObjectOfType<Damage_OnEnemy>();
+        var damageOnEnemy = FindAnyObjectByType<Damage_OnEnemy>();
         if (damageOnEnemy != null)
         {
             damageOnEnemy.OnDamageDebug -= HandleDamageDebug;
@@ -134,6 +142,76 @@ public class PlayerSkillFunctions : MonoBehaviour
             SetDebugMessage("[未命中] SwordQ 扇形范围内无敌人");
             Debug.Log("[SwordQ 未命中] 扇形范围内无敌人");
         }
+    }
+
+    /// <summary>
+    /// 由 Spell_Q 动画的 Animation Event 在命中帧调用
+    /// </summary>
+    public void OnSpellQHit()
+    {
+        Debug.Log("[SpellQ] OnSpellQHit 被调用");
+
+        if (m_PlayerCtrl == null || m_ProjectileManager == null)
+        {
+            Debug.LogWarning("[SpellQ] PlayerCtrl 或 ProjectileManager 未找到");
+            return;
+        }
+
+        if (SpellQ_Template == null)
+        {
+            Debug.LogWarning("[SpellQ] SpellQ_Template 未配置");
+            return;
+        }
+
+        // 读取配置的法球数量
+        int spellCount = 1;
+        if (m_PlayerCtrl.PlayerPropertyAsset != null)
+        {
+            spellCount = Mathf.RoundToInt(m_PlayerCtrl.PlayerPropertyAsset.SpellSingle_Spell_Count);
+        }
+        spellCount = Mathf.Max(1, spellCount);
+
+        SetDebugMessage($"[SpellQ] 开始发射 {spellCount} 个法球");
+        Debug.Log($"[SpellQ] 开始发射 {spellCount} 个法球，间隔 {SpellQ_SpawnInterval}s");
+
+        // 启动协程依次发射
+        StartCoroutine(SpellQ_LaunchLoop(spellCount));
+    }
+
+    /// <summary>
+    /// SpellQ 多球发射协程
+    /// </summary>
+    private System.Collections.IEnumerator SpellQ_LaunchLoop(int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            // 计算发射方向（玩家朝向）
+            Vector3 direction = m_PlayerTransform.forward;
+
+            // 获取玩家属性
+            PlayerPropertyTemplate playerProp = m_PlayerCtrl != null ? m_PlayerCtrl.PlayerPropertyAsset : null;
+
+            // 生成法球（应用发射偏移量，从法杖位置发出）
+            Vector3 spawnPos = m_PlayerTransform.position + SpellQ_Template.spawnOffset;
+            m_ProjectileManager.SpawnFlyingProjectile(
+                SpellQ_Template,
+                spawnPos,
+                direction,
+                DamageTemplate.SkillType.SpellSingle,
+                playerProp
+            );
+
+            Debug.Log($"[SpellQ] 第 {i + 1}/{count} 个法球已发射");
+
+            // 等待间隔（除最后一个外）
+            if (i < count - 1)
+            {
+                yield return new WaitForSeconds(SpellQ_SpawnInterval);
+            }
+        }
+
+        SetDebugMessage($"[SpellQ] {count} 个法球发射完毕");
+        Debug.Log($"[SpellQ] {count} 个法球发射完毕");
     }
 
     // ===== 扇形检测 =====
@@ -227,7 +305,7 @@ public class PlayerSkillFunctions : MonoBehaviour
         titleStyle.fontStyle = FontStyle.Bold;
         titleStyle.fontSize = 13;
         titleStyle.normal.textColor = Color.white;
-        GUI.Label(new Rect(18, yBase + 4f, boxW - 16f, 18f), "=== SwordQ Debug ===", titleStyle);
+        GUI.Label(new Rect(18, yBase + 4f, boxW - 16f, 18f), "=== Skill Debug ===", titleStyle);
 
         for (int i = 0; i < allLines.Count; i++)
         {

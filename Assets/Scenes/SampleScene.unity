@@ -455,6 +455,58 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 16307ca4a264a4746bdf886dec8143aa, type: 3}
+--- !u!1 &822477730
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 822477732}
+  - component: {fileID: 822477731}
+  m_Layer: 0
+  m_Name: ProjecitileManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &822477731
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 822477730}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1af6086f360a2e94caf17abeb06bf4be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Global_ProjectileManager
+  flyingTemplates:
+  - {fileID: 11400000, guid: e206cb73ca1a7c64d8abf6fe85d454be, type: 2}
+  groundAoeTemplates: []
+  slashTemplates: []
+  enemyLayer:
+    serializedVersion: 2
+    m_Bits: 256
+  showDebugGizmos: 0
+--- !u!4 &822477732
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 822477730}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.13768, y: 0.05578, z: -0.03583}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -573,7 +625,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyPropertyEditor
   EnemyPropertyAsset: {fileID: 11400000, guid: 93d3cecc8e4d844459af323b2a5cc4fc, type: 2}
   Health_Max: 10000
-  Health_Current: 7950.9277
+  Health_Current: 5522.132
   Physical_Strength: 100
   Physical_Defense: 20
   Magic_Strength: 0
@@ -767,10 +819,10 @@ MonoBehaviour:
   "\u5251AOE\u8303\u56F4": 1
   "\u5251AOE\u6570\u91CF": 1
   "\u6CD5\u5355\u4F53\u4F24\u5BB3\u57FA\u7840\u503C": 100
-  "\u6CD5\u5355\u4F53\u589E\u4F24\u500D\u7387": 0
+  "\u6CD5\u5355\u4F53\u589E\u4F24\u500D\u7387": 1
   "\u6CD5\u5355\u4F53\u6CD5\u529B\u6D88\u8017": 20
   "\u6CD5\u5355\u4F53\u51B7\u5374\u65F6\u95F4": 2
-  "\u6CD5\u5355\u4F53\u6CD5\u7403\u6570\u91CF": 1
+  "\u6CD5\u5355\u4F53\u6CD5\u7403\u6570\u91CF": 2
   "\u6CD5\u683C\u6321\u51CF\u4F24\u6BD4\u4F8B": 80
   "\u6CD5\u683C\u6321\u6CD5\u529B\u6D88\u8017": 20
   "\u6CD5\u683C\u6321\u51B7\u5374\u65F6\u95F4": 2
@@ -818,6 +870,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerSkillFunctions
   SwordQ_Radius: 1.5
   SwordQ_Angle: 60
+  SpellQ_Template: {fileID: 11400000, guid: e206cb73ca1a7c64d8abf6fe85d454be, type: 2}
+  SpellQ_SpawnInterval: 0.1
   EnemyLayer:
     serializedVersion: 2
     m_Bits: 256
@@ -1937,3 +1991,4 @@ SceneRoots:
   - {fileID: 1017595243}
   - {fileID: 1129830463}
   - {fileID: 2135962862}
+  - {fileID: 822477732}
