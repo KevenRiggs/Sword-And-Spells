@@ -487,10 +487,8 @@ MonoBehaviour:
   flyingTemplates:
   - {fileID: 11400000, guid: e206cb73ca1a7c64d8abf6fe85d454be, type: 2}
   groundAoeTemplates: []
-  slashTemplates: []
-  enemyLayer:
-    serializedVersion: 2
-    m_Bits: 256
+  slashTemplates:
+  - {fileID: 11400000, guid: 76eb0bef048ff3f4fade74639d5f05b2, type: 2}
   showDebugGizmos: 0
 --- !u!4 &822477732
 Transform:
@@ -625,7 +623,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyPropertyEditor
   EnemyPropertyAsset: {fileID: 11400000, guid: 93d3cecc8e4d844459af323b2a5cc4fc, type: 2}
   Health_Max: 10000
-  Health_Current: 5522.132
+  Health_Current: 9636.994
   Physical_Strength: 100
   Physical_Defense: 20
   Magic_Strength: 0
@@ -813,11 +811,11 @@ MonoBehaviour:
   "\u5251\u683C\u6321\u51B7\u5374\u65F6\u95F4": 2
   "\u5251\u683C\u6321\u5B8C\u7F8E\u683C\u6321\u6982\u7387": 50
   "\u5251AOE\u4F24\u5BB3\u57FA\u7840\u503C": 80
-  "\u5251AOE\u589E\u4F24\u500D\u7387": 0
+  "\u5251AOE\u589E\u4F24\u500D\u7387": 1
   "\u5251AOE\u4F53\u529B\u6D88\u8017": 40
   "\u5251AOE\u51B7\u5374\u65F6\u95F4": 5
   "\u5251AOE\u8303\u56F4": 1
-  "\u5251AOE\u6570\u91CF": 1
+  "\u5251AOE\u6570\u91CF": 2
   "\u6CD5\u5355\u4F53\u4F24\u5BB3\u57FA\u7840\u503C": 100
   "\u6CD5\u5355\u4F53\u589E\u4F24\u500D\u7387": 1
   "\u6CD5\u5355\u4F53\u6CD5\u529B\u6D88\u8017": 20
@@ -872,6 +870,8 @@ MonoBehaviour:
   SwordQ_Angle: 60
   SpellQ_Template: {fileID: 11400000, guid: e206cb73ca1a7c64d8abf6fe85d454be, type: 2}
   SpellQ_SpawnInterval: 0.1
+  SwordR_Template: {fileID: 11400000, guid: 76eb0bef048ff3f4fade74639d5f05b2, type: 2}
+  SwordR_SpawnInterval: 0.15
   EnemyLayer:
     serializedVersion: 2
     m_Bits: 256

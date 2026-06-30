@@ -81,7 +81,7 @@ public void OnSwordQHit();
 
 ---
 
-## Spell 单体 Q 技能（SpellQ）✅ 设计中
+## Spell 单体 Q 技能（SpellQ）✅ 已实现
 
 ### 1. 发射原理
 
@@ -150,6 +150,82 @@ PlayerController_Skills.OnSkillTriggered (RightHold, 0)
 
 ---
 
+## SwordR 多波剑气技能（Slash）✅ 已实现
+
+### 1. 发射原理
+
+在动画的第 N 帧（由 Animation Event 触发 `OnSwordRHit`）时，根据 `PlayerPropertyTemplate.SwordAOE_Slash_Count` 配置的波数，向角色朝向方向依次释放多波剑气。每波剑气独立，对路径上的所有敌人造成伤害。
+
+### 2. 与 SpellQ 的核心区别
+
+| 特性 | SpellQ (法球) | SwordR (剑气) |
+|------|--------------|--------------|
+| 碰撞方式 | `SphereCast`，撞到第1个敌人**停止** | `BoxCast`，路径上**所有**敌人受击 |
+| 命中后行为 | 弹射物回收入池 | 剑气**穿透**敌人，继续飞行 |
+| 单波伤害数 | 每波最多1人 | 每波对**所有**路径敌人各1次 |
+| 多波行为 | 各波独立，可能同一人被多波命中 | 各波独立，同一波**内**不重复伤敌 |
+
+### 3. 配置方式
+
+SwordR 的弹射物参数通过 **SlashProjectileTemplate.asset** 配置：
+
+| 配置位置 | 字段 | 说明 |
+|---------|------|------|
+| `SlashProjectileTemplate.asset` | `prefab` | 剑气视觉 Prefab |
+| `SlashProjectileTemplate.asset` | `speed` | 剑气飞行速度（米/秒） |
+| `SlashProjectileTemplate.asset` | `slashLength` | 剑气长度（米） |
+| `SlashProjectileTemplate.asset` | `slashWidth` | 剑气宽度（米） |
+| `SlashProjectileTemplate.asset` | `maxLifetime` | 剑气最大存活时间（秒），0表示按 slashLength/speed 自动计算 |
+| `SlashProjectileTemplate.asset` | `spawnOffset` | 发射位置偏移（世界坐标） |
+| `PlayerSkillFunctions` Inspector | `SwordR_Template` | 引用的 `.asset` |
+| `PlayerSkillFunctions` Inspector | `SwordR_SpawnInterval` | 多波发射间隔（秒） |
+
+### 4. 防重复伤敌机制
+
+剑气使用 `BoxCast` 每帧检测，每波剑气持续飞行期间（通常几十帧），同一敌人可能被连续多帧命中多次。
+
+**解决方案**：在 `SlashProjectile` 实例中增加 `HashSet<GameObject> hitEnemies`，每次命中时查表：
+
+```
+BoxCast 命中 EnemyA
+    → 检查 hitEnemies 是否包含 EnemyA
+        → 不包含：
+            → 加入 hitEnemies
+            → 触发 OnProjectileHit（特效/音效）
+            → 触发 OnSkillHit（伤害结算）
+        → 已包含：跳过（剑气继续飞行）
+```
+
+每波新剑气 Spawn 时清空 `hitEnemies`。
+
+### 5. 事件链
+
+```
+PlayerController_Skills.OnSkillTriggered (LeftHold, 2)
+    → PlayerSkillFunctions.HandleSkillTriggered (预处理，记录调试信息)
+        → [动画播放 Sword_R]
+            → [动画第 N 帧 Animation Event]
+                → OnSwordRHit()
+                    → [协程] 依次 Spawn 剑气波
+                        → [每波剑气每帧 BoxCast]
+                            → [首次命中 EnemyA]
+                                → OnProjectileHit (特效/音效)
+                                → OnSkillHit
+                                    → Damage_OnEnemy.HandleSkillHit()
+                                        → Damage_OnEnemy.SettleDamage()
+                            → [后续帧再碰到 EnemyA] → 查 HashSet → 跳过
+                        → [下一波发射时重置 HashSet]
+```
+
+### 6. 扩展方向
+
+| 扩展方向 | 当前是否实现 | 如何扩展 |
+|---------|-------------|---------|
+| 剑气碰撞后分裂 | 否 | 命中后从该点 Spawn 多个小剑气 |
+| 剑气弯曲 | 否 | 修改 UpdateSlashProjectiles 中 direction 转向计算 |
+
+---
+
 ## 对接说明
 
 ### PlayerSkillFunctions → Global_ProjectileManager
@@ -194,7 +270,7 @@ PlayerController_Skills.OnSkillTriggered (RightHold, 0)
 |------|---------|------|
 | SwordQ 单体 | ✅ 已实现 | 扇形单体 |
 | SwordE 格挡 | 未设计 | 格挡无伤害，逻辑待定 |
-| SwordR AOE | 未设计 | 扇形 → 多目标剑气 |
+| SwordR AOE | ✅ 已实现 | 多波剑气，BoxCast 穿透路径所有敌人 |
 | SpellQ 单体 | ✅ 已实现 | 多球弹射物 |
 | SpellE 格挡 | 未设计 |  |
 | SpellR AOE | 未设计 | 地板范围技能 |
@@ -214,6 +290,10 @@ public class PlayerSkillFunctions : MonoBehaviour
     // SpellQ
     public FlyingProjectileTemplate SpellQ_Template;  // 引用的 .asset
     public float SpellQ_SpawnInterval = 0.1f;       // 发射间隔
+
+    // SwordR
+    public SlashProjectileTemplate SwordR_Template;  // 引用的 .asset
+    public float SwordR_SpawnInterval = 0.15f;      // 多波发射间隔
 
     public LayerMask EnemyLayer;
 
@@ -244,6 +324,10 @@ public class PlayerSkillFunctions : MonoBehaviour
 
     // ===== SpellQ 发射逻辑 =====
     System.Collections.IEnumerator SpellQ_LaunchLoop(int count);
+
+    // ===== SwordR 发射逻辑 =====
+    public void OnSwordRHit();
+    System.Collections.IEnumerator SwordR_LaunchLoop(int count);
 
     // ===== 调试辅助 =====
     void SetDebugMessage(string msg);

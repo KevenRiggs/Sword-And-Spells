@@ -257,11 +257,14 @@ public class Global_ProjectileManager : MonoBehaviour
         p.direction = direction.normalized;
         p.speed = template.speed;
         p.lifetime = 0f;
-        p.maxLifetime = template.slashLength / template.speed; // 根据长度和速度计算存活时间
+        p.maxLifetime = template.maxLifetime > 0f
+            ? template.maxLifetime
+            : template.slashLength / template.speed; // 有配置用配置，无则按飞行距离计算
         p.skillType = skillType;
         p.playerProp = playerProp;
         p.isActive = true;
         p.prevPosition = spawnPosition;
+        p.hitEnemies.Clear();  // 发射时清空名单
         p.gameObject.SetActive(true);
 
         m_ActiveSlash.Add(p);
@@ -371,17 +374,24 @@ public class Global_ProjectileManager : MonoBehaviour
 
             if (Physics.BoxCast(center, halfExtents, moveDir, out RaycastHit hit, orientation, moveDist, p.template.hitLayer, QueryTriggerInteraction.Ignore))
             {
-                // 命中敌人
-                OnProjectileHit?.Invoke(hit.collider.gameObject, p.skillType, p.playerProp, hit.point);
-                OnSkillHit?.Invoke(hit.collider.gameObject, p.skillType, p.playerProp);
+                // 防重复伤敌：检查该敌人是否已在本波中受伤
+                if (!p.hitEnemies.Contains(hit.collider.gameObject))
+                {
+                    p.hitEnemies.Add(hit.collider.gameObject);
 
-                // 播放命中特效
-                if (p.template.hitVFX != null)
-                    Instantiate(p.template.hitVFX, hit.point, Quaternion.identity);
+                    // 命中敌人
+                    OnProjectileHit?.Invoke(hit.collider.gameObject, p.skillType, p.playerProp, hit.point);
+                    OnSkillHit?.Invoke(hit.collider.gameObject, p.skillType, p.playerProp);
 
-                // 播放命中音效
-                if (p.template.hitSFX != null)
-                    AudioSource.PlayClipAtPoint(p.template.hitSFX, hit.point);
+                    // 播放命中特效
+                    if (p.template.hitVFX != null)
+                        Instantiate(p.template.hitVFX, hit.point, Quaternion.identity);
+
+                    // 播放命中音效
+                    if (p.template.hitSFX != null)
+                        AudioSource.PlayClipAtPoint(p.template.hitSFX, hit.point);
+                }
+                // 已在名单中则跳过（剑气继续飞行，不回收）
             }
 
             p.prevPosition = currPos;
@@ -509,6 +519,7 @@ public class Global_ProjectileManager : MonoBehaviour
             }
         }
     }
+
 }
 
 // ===== 弹射物实例数据结构 =====
@@ -566,4 +577,10 @@ public class SlashProjectile
     public DamageTemplate.SkillType skillType;
     public PlayerPropertyTemplate playerProp;
     public bool isActive;
+    public HashSet<GameObject> hitEnemies;  // 记录本波已伤害的敌人，防止重复伤敌
+
+    public SlashProjectile()
+    {
+        hitEnemies = new HashSet<GameObject>();
+    }
 }

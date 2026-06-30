@@ -21,6 +21,12 @@ public class PlayerSkillFunctions : MonoBehaviour
     [Tooltip("多球发射间隔（秒）")]
     public float SpellQ_SpawnInterval = 0.1f;
 
+    [Header("SwordR 配置")]
+    [Tooltip("剑气弹射物模板（.asset）")]
+    public SlashProjectileTemplate SwordR_Template;
+    [Tooltip("多波发射间隔（秒）")]
+    public float SwordR_SpawnInterval = 0.15f;
+
     [Header("引用")]
     [Tooltip("Enemy 层遮罩（拖入 Enemy 层）")]
     public LayerMask EnemyLayer;
@@ -212,6 +218,78 @@ public class PlayerSkillFunctions : MonoBehaviour
 
         SetDebugMessage($"[SpellQ] {count} 个法球发射完毕");
         Debug.Log($"[SpellQ] {count} 个法球发射完毕");
+    }
+
+    // ===== SwordR 发射逻辑 =====
+
+    /// <summary>
+    /// 由 Sword_R 动画的 Animation Event 在释放帧调用
+    /// </summary>
+    public void OnSwordRHit()
+    {
+        Debug.Log("[SwordR] OnSwordRHit 被调用");
+
+        if (m_PlayerCtrl == null || m_ProjectileManager == null)
+        {
+            Debug.LogWarning("[SwordR] PlayerCtrl 或 ProjectileManager 未找到");
+            return;
+        }
+
+        if (SwordR_Template == null)
+        {
+            Debug.LogWarning("[SwordR] SwordR_Template 未配置");
+            return;
+        }
+
+        // 读取配置的剑气波数
+        int slashCount = 1;
+        if (m_PlayerCtrl.PlayerPropertyAsset != null)
+        {
+            slashCount = Mathf.RoundToInt(m_PlayerCtrl.PlayerPropertyAsset.SwordAOE_Count);
+        }
+        slashCount = Mathf.Max(1, slashCount);
+
+        SetDebugMessage($"[SwordR] 开始释放 {slashCount} 波剑气");
+        Debug.Log($"[SwordR] 开始释放 {slashCount} 波剑气，间隔 {SwordR_SpawnInterval}s");
+
+        // 启动协程依次发射
+        StartCoroutine(SwordR_LaunchLoop(slashCount));
+    }
+
+    /// <summary>
+    /// SwordR 多波发射协程
+    /// </summary>
+    private System.Collections.IEnumerator SwordR_LaunchLoop(int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            // 计算发射方向（玩家朝向）
+            Vector3 direction = m_PlayerTransform.forward;
+
+            // 获取玩家属性
+            PlayerPropertyTemplate playerProp = m_PlayerCtrl != null ? m_PlayerCtrl.PlayerPropertyAsset : null;
+
+            // 生成剑气（应用发射偏移量，从玩家位置发出）
+            Vector3 spawnPos = m_PlayerTransform.position + SwordR_Template.spawnOffset;
+            m_ProjectileManager.SpawnSlashProjectile(
+                SwordR_Template,
+                spawnPos,
+                direction,
+                DamageTemplate.SkillType.SwordAOE,
+                playerProp
+            );
+
+            Debug.Log($"[SwordR] 第 {i + 1}/{count} 波剑气已释放");
+
+            // 等待间隔（除最后一个外）
+            if (i < count - 1)
+            {
+                yield return new WaitForSeconds(SwordR_SpawnInterval);
+            }
+        }
+
+        SetDebugMessage($"[SwordR] {count} 波剑气释放完毕");
+        Debug.Log($"[SwordR] {count} 波剑气释放完毕");
     }
 
     // ===== 扇形检测 =====

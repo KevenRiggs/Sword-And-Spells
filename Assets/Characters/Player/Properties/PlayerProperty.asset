@@ -35,11 +35,11 @@ MonoBehaviour:
   SwordBlock_Cooldown_Time: 2
   SwordBlock_Perfect_Block_Chance: 50
   SwordAOE_Damage_Base: 80
-  SwordAOE_Damage_Multiplier: 0
+  SwordAOE_Damage_Multiplier: 1
   SwordAOE_Stamina_Cost: 40
   SwordAOE_Cooldown_Time: 5
   SwordAOE_Range: 1
-  SwordAOE_Count: 1
+  SwordAOE_Count: 2
   SpellSingle_Damage_Base: 100
   SpellSingle_Damage_Multiplier: 1
   SpellSingle_Mana_Cost: 20

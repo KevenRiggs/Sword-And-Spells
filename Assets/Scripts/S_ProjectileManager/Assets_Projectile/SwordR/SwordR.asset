@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3c4b93b5f2445c4bbd8e74424dcd2c3, type: 3}
+  m_Name: SwordR
+  m_EditorClassIdentifier: Assembly-CSharp::SlashProjectileTemplate
+  prefab: {fileID: 1105029933192456003, guid: f87b04f69cd047e4eb501009ae941b50, type: 3}
+  hitVFX: {fileID: 0}
+  hitSFX: {fileID: 0}
+  hitLayer:
+    serializedVersion: 2
+    m_Bits: 256
+  speed: 30
+  slashLength: 0.5
+  slashWidth: 1
+  maxLifetime: 3
+  spawnOffset: {x: 0, y: 0.5, z: -0.5}
