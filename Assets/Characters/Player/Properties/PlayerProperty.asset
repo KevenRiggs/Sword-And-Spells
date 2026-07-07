@@ -50,8 +50,8 @@ MonoBehaviour:
   SpellBlock_Cooldown_Time: 2
   SpellBlock_Perfect_Block_Chance: 50
   SpellAOE_Damage_Base: 80
-  SpellAOE_Damage_Multiplier: 0
+  SpellAOE_Damage_Multiplier: 1
   SpellAOE_Mana_Cost: 40
   SpellAOE_Cooldown_Time: 5
-  SpellAOE_Range: 1
-  SpellAOE_Duration: 1
+  SpellAOE_Range: 10
+  SpellAOE_Duration: 10

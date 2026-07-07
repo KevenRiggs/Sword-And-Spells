@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: EnemyProperty
   m_EditorClassIdentifier: Assembly-CSharp::EnemyPropertyTemplate
   Health_Max: 10000
-  Health_Current: 10000
+  Health_Current: 9235.776
   Physical_Strength: 100
   Physical_Defense: 20
   Magic_Strength: 0

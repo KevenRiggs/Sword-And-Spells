@@ -221,18 +221,20 @@ public class Global_ProjectileManager : MonoBehaviour
         GroundAOEProjectile p = GetFromGroundAoePool(template);
         p.transform.position = spawnPosition;
         p.elapsed = 0f;
-        p.duration = template.duration;
+        p.duration = playerProp.SpellAOE_Duration > 0f ? playerProp.SpellAOE_Duration : template.duration;
         p.tickInterval = template.tickInterval;
-        p.damagePerTick = template.damagePerTick;
+        p.lastTickTime = -p.tickInterval;      // 首次 tick 在 elapsed=0 时立即触发
+        p.scaledRadius = template.effectRadius * playerProp.SpellAOE_Range;
         p.skillType = skillType;
         p.playerProp = playerProp;
         p.isActive = true;
         p.gameObject.SetActive(true);
 
-        // 生成地面指示器
+        // 生成地面指示器（应用 SpellAOE_Range 缩放）
         if (template.groundIndicator != null)
         {
             var indicator = Instantiate(template.groundIndicator, spawnPosition, Quaternion.identity);
+            indicator.transform.localScale = Vector3.one * playerProp.SpellAOE_Range;
             p.indicatorObject = indicator;
         }
 
@@ -334,13 +336,17 @@ public class Global_ProjectileManager : MonoBehaviour
                 continue;
             }
 
-            // Tick 检测：范围内所有敌人受伤
-            Collider[] hits = Physics.OverlapSphere(p.transform.position, p.template.effectRadius, p.template.hitLayer, QueryTriggerInteraction.Ignore);
-            foreach (var hit in hits)
+            // Tick 检测：距上次触发已满 tickInterval 时才对范围内所有敌人造成伤害
+            if (p.elapsed - p.lastTickTime >= p.tickInterval)
             {
-                // 每 tick 对每个敌人通知一次伤害（实际结算由 Damage_OnEnemy 控制是否重复受伤）
-                OnProjectileHit?.Invoke(hit.gameObject, p.skillType, p.playerProp, hit.ClosestPoint(p.transform.position));
-                OnSkillHit?.Invoke(hit.gameObject, p.skillType, p.playerProp);
+                p.lastTickTime = p.elapsed;
+
+                Collider[] hits = Physics.OverlapSphere(p.transform.position, p.scaledRadius, p.template.hitLayer, QueryTriggerInteraction.Ignore);
+                foreach (var hit in hits)
+                {
+                    OnProjectileHit?.Invoke(hit.gameObject, p.skillType, p.playerProp, hit.ClosestPoint(p.transform.position));
+                    OnSkillHit?.Invoke(hit.gameObject, p.skillType, p.playerProp);
+                }
             }
         }
     }
@@ -554,7 +560,8 @@ public class GroundAOEProjectile
     public float elapsed;
     public float duration;
     public float tickInterval;
-    public float damagePerTick;
+    public float lastTickTime;      // 上次触发伤害的时间点（elapsed 值）
+    public float scaledRadius;       // 实际生效半径（effectRadius * SpellAOE_Range）
     public GameObject indicatorObject;
     public DamageTemplate.SkillType skillType;
     public PlayerPropertyTemplate playerProp;

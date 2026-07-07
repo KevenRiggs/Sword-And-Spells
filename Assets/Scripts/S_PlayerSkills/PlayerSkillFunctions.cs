@@ -27,9 +27,17 @@ public class PlayerSkillFunctions : MonoBehaviour
     [Tooltip("多波发射间隔（秒）")]
     public float SwordR_SpawnInterval = 0.15f;
 
+    [Header("SpellR 配置")]
+    [Tooltip("地面持续范围弹射物模板（.asset）")]
+    public GroundAOEProjectileTemplate SpellR_Template;
+    [Tooltip("区域中心距玩家的距离（米）")]
+    public float SpellR_SpawnDistance = 8f;
+
     [Header("引用")]
     [Tooltip("Enemy 层遮罩（拖入 Enemy 层）")]
     public LayerMask EnemyLayer;
+    [Tooltip("Ground 层遮罩（用于 SpellR 地面探测）")]
+    public LayerMask GroundLayer;
 
     // ===== 私有字段 =====
 
@@ -290,6 +298,79 @@ public class PlayerSkillFunctions : MonoBehaviour
 
         SetDebugMessage($"[SwordR] {count} 波剑气释放完毕");
         Debug.Log($"[SwordR] {count} 波剑气释放完毕");
+    }
+
+    // ===== SpellR 发射逻辑 =====
+
+    /// <summary>
+    /// 由 Spell_R 动画的 Animation Event 在释放帧调用
+    /// </summary>
+    public void OnSpellRHit()
+    {
+        Debug.Log("[SpellR] OnSpellRHit 被调用");
+
+        if (m_PlayerCtrl == null || m_ProjectileManager == null)
+        {
+            Debug.LogWarning("[SpellR] PlayerCtrl 或 ProjectileManager 未找到");
+            return;
+        }
+
+        if (SpellR_Template == null)
+        {
+            Debug.LogWarning("[SpellR] SpellR_Template 未配置");
+            return;
+        }
+
+        SetDebugMessage("[SpellR] 地面持续范围技能释放");
+        Debug.Log("[SpellR] 地面持续范围技能释放");
+
+        // 启动协程
+        StartCoroutine(SpellR_LaunchLoop());
+    }
+
+    /// <summary>
+    /// SpellR 单次释放（无多波，直接生成一个持续区域）
+    /// </summary>
+    private System.Collections.IEnumerator SpellR_LaunchLoop()
+    {
+        // 计算区域中心点 XZ 位置
+        Vector3 xzCenter = m_PlayerTransform.position + m_PlayerTransform.forward * SpellR_SpawnDistance;
+
+        // Raycast 地面探测，得到精确 Y 值
+        Vector3 groundPoint = GetSpellRGroundPoint(xzCenter);
+
+        // 获取玩家属性
+        PlayerPropertyTemplate playerProp = m_PlayerCtrl != null ? m_PlayerCtrl.PlayerPropertyAsset : null;
+
+        // 生成地面AOE
+        m_ProjectileManager.SpawnGroundAOEProjectile(
+            SpellR_Template,
+            groundPoint,
+            DamageTemplate.SkillType.SpellAOE,
+            playerProp
+        );
+
+        Debug.Log($"[SpellR] 地面区域已生成于 {groundPoint}");
+
+        yield break;
+    }
+
+    /// <summary>
+    /// 通过向下 Raycast 探测 Ground 层，获取地面点的精确 Y 坐标
+    /// </summary>
+    private Vector3 GetSpellRGroundPoint(Vector3 xzOrigin)
+    {
+        // 从玩家头顶 10m 高度向下射线检测，避免从地面以下开始检测
+        Vector3 rayOrigin = new Vector3(xzOrigin.x, m_PlayerTransform.position.y + 10f, xzOrigin.z);
+        if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, Mathf.Infinity, GroundLayer))
+        {
+            Debug.Log($"[SpellR] 地面探测命中: {hit.point.y}, 浮起 0.02m");
+            return new Vector3(xzOrigin.x, hit.point.y + 0.02f, xzOrigin.z);
+        }
+
+        // Fallback：未命中地面时使用原始位置
+        Debug.LogWarning("[SpellR] 地面探测未命中，使用 XZ 原始位置");
+        return xzOrigin;
     }
 
     // ===== 扇形检测 =====

@@ -226,6 +226,145 @@ PlayerController_Skills.OnSkillTriggered (LeftHold, 2)
 
 ---
 
+## SpellR 地面持续范围技能（SpellAOE）✅ 设计方案
+
+### 1. 效果原理
+
+在动画的第 N 帧（由 Animation Event 触发 `OnSpellRHit`）时，以玩家朝向前方一定距离的地面位置为中心，生成一块圆形范围区域。该区域持续 `PlayerPropertyTemplate.SpellAOE_Duration` 秒，每隔 `GroundAOE_SpellR.asset` 的 `tickInterval` 对范围内所有敌人触发一次伤害通知。
+
+### 2. 与 SwordR 的核心区别
+
+| 特性 | SwordR（剑气） | SpellR（地面持续范围） |
+|------|--------------|----------------------|
+| 移动方式 | 剑气从玩家位置向朝向飞行 | 区域固定在前方地面，不移动 |
+| 碰撞检测 | BoxCast 每帧检测路径上所有敌人 | OverlapSphere 每 tick 检测范围内所有敌人 |
+| 命中后行为 | 剑气穿透敌人继续飞行 | 区域驻留，敌人离开范围则不再受击 |
+| 单次伤害次数 | 每波剑气对每个敌人最多1次 | 区域内每 tick 对每个敌人1次 |
+| 多波行为 | 各波独立，可重叠 | 单波区域，无多波 |
+
+### 3. 配置方式
+
+SpellR 的弹射物参数通过 **GroundAOE_SpellR.asset** 配置：
+
+| 配置位置 | 字段 | 说明 |
+|---------|------|------|
+| `GroundAOE_SpellR.asset` | `prefab` | 地面持续特效 Prefab |
+| `GroundAOE_SpellR.asset` | `groundIndicator` | 地面指示器 Prefab（如圆形范围圈） |
+| `GroundAOE_SpellR.asset` | `effectRadius` | 基础影响范围半径（米），实际范围由 `PlayerPropertyTemplate.SpellAOE_Range` 缩放 |
+| `GroundAOE_SpellR.asset` | `tickInterval` | 伤害 tick 间隔（秒），决定每秒触发几次伤害 |
+| `GroundAOE_SpellR.asset` | `hitVFX` | 命中特效 Prefab（可选） |
+| `GroundAOE_SpellR.asset` | `hitSFX` | 命中音效（可选） |
+| `PlayerSkillFunctions` Inspector | `SpellR_Template` | 引用的 `.asset` |
+| `PlayerSkillFunctions` Inspector | `SpellR_SpawnDistance` | 区域中心距玩家的距离（米） |
+
+### 4. 区域定位算法
+
+```
+目标中心位置 = player.position + player.forward * SpellR_SpawnDistance
+实际实现：直接取 player.position + forward * distance，Prefab 自带 Y 轴偏移
+```
+
+### 4.1 地板高度保护算法
+
+由于 SpellR 是贴地地板特效（圆形光圈/法阵），需要通过 Raycast 地面探测确保：
+- 特效不会沉入地面以下
+- 特效不会因悬浮产生 Z-fighting 或视觉漂浮感
+
+**算法流程**：
+
+```
+1. 计算 XZ 落点
+   XZ = player.position + player.forward * SpellR_SpawnDistance
+
+2. 向下 Raycast 探测地面
+   起始点 = (XZ.x, player.position.y + 10f, XZ.z)  ← 从玩家头顶 10m 开始往下扫
+   射线方向 = Vector3.down
+   检测层级 = Ground Layer（只检测地形，避免命中敌人）
+
+3. 命中时
+   Y = hit.point.y + 0.02f（浮起 2cm，避免 Z-fighting）
+
+4. 未命中时（Fallbook）
+   Y = XZ 原始 Y 值（不减也不加）
+```
+
+**浮起量 0.02m 的理由**：
+- 太小（<0.01m）：仍可能与地面产生 Z-fighting
+- 太大（>0.1m）：视觉上开始有"漂浮感"
+- 0.02m 是业界常见经验值
+
+**Ground Layer 配置要求**：
+- Unity 中已存在 Ground 层（用于角色防穿模）
+- SpellR Raycast 只需检测 Ground 层，避免误检敌人或其他物体
+- `PlayerSkillFunctions` Inspector 中新增 `GroundLayer` 字段
+
+**代码实现位置**：`PlayerSkillFunctions` 私有方法 `GetGroundPoint()`
+```csharp
+private Vector3 GetSpellRGroundPoint(Vector3 xzOrigin)
+{
+    // 从玩家头顶 10m 高度向下射线检测
+    Vector3 rayOrigin = new Vector3(xzOrigin.x, m_PlayerTransform.position.y + 10f, xzOrigin.z);
+    if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, Mathf.Infinity, GroundLayer))
+    {
+        return new Vector3(xzOrigin.x, hit.point.y + 0.02f, xzOrigin.z);
+    }
+    // Fallback：未命中时使用原始 XZ 位置
+    return xzOrigin;
+}
+```
+
+### 5. 伤害通知机制
+
+`GroundAOEProjectile` 每 tick 调用一次 `OverlapSphere`：
+- 范围判定：敌人 XZ 坐标在圆形范围内即受击（**不限 Y 轴高度**）
+- 每 tick 对范围内**所有敌人**分别触发一次 `OnSkillHit`
+- `Damage_OnEnemy.HandleSkillHit` 中通过 `EnemyProperty.Health_Current` 累积扣血，实现"每秒多次伤害"效果
+- 区域内敌人**每次 tick 都会被通知**，不依赖防重复伤敌机制
+
+### 6. 事件链
+
+```
+PlayerController_Skills.OnSkillTriggered (RightHold, 2)
+    → PlayerSkillFunctions.HandleSkillTriggered (预处理，记录调试信息)
+        → [动画播放 Spell_R]
+            → [动画第 N 帧 Animation Event]
+                → OnSpellRHit()
+                    → 读取 SpellAOE_Range、SpellAOE_Duration
+                    → 计算区域中心点（玩家前方 SpawnDistance 处地面）
+                    → 调用 Global_ProjectileManager.SpawnGroundAOEProjectile()
+                        → [区域持续 SpellAOE_Duration 秒]
+                        → [每 tickInterval 秒]
+                            → OverlapSphere 收集范围内所有敌人
+                            → 对每个敌人触发 OnSkillHit
+                                → Damage_OnEnemy.HandleSkillHit()
+                                    → Damage_OnEnemy.SettleDamage()
+```
+
+### 7. 代码扩展（PlayerSkillFunctions）
+
+```csharp
+// 新增 Inspector 字段
+[Header("SpellR 配置")]
+public GroundAOEProjectileTemplate SpellR_Template;  // 引用的 .asset
+public float SpellR_SpawnDistance = 8f;              // 区域中心距玩家距离
+
+// Animation Event 入口
+public void OnSpellRHit();
+
+// SpellR 发射逻辑
+System.Collections.IEnumerator SpellR_LaunchLoop();
+```
+
+### 8. 扩展方向
+
+| 扩展方向 | 当前是否实现 | 如何扩展 |
+|---------|-------------|---------|
+| 引导功能（玩家移动时区域跟随） | 否 | 在 GroundAOE.Update 中每帧重新计算中心位置跟随玩家 |
+| 区域渐变特效 | 否 | 在 GroundAOE 中 Lerp 缩放 indicator Prefab |
+| 区域边界伤害（敌人生成/离开时触发额外伤害） | 否 | 在 UpdateGroundAOEProjectiles 中记录上帧敌人列表，新增/消失时额外触发 |
+
+---
+
 ## 对接说明
 
 ### PlayerSkillFunctions → Global_ProjectileManager

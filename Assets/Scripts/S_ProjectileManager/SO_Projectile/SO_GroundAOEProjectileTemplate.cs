@@ -17,9 +17,6 @@ public class GroundAOEProjectileTemplate : ProjectileTemplate
     [Tooltip("伤害 tick 间隔（秒）")]
     public float tickInterval = 0.5f;
 
-    [Tooltip("每 tick 伤害值")]
-    public float damagePerTick = 10f;
-
     [Tooltip("地面指示器 Prefab（如圆形范围圈）")]
     public GameObject groundIndicator;
 

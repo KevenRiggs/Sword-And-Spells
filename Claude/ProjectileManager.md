@@ -121,10 +121,9 @@ SpellR 地板持续范围技能，生成后不移动，在范围内持续检测�
 
 | 字段 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `effectRadius` | float | 5f | 影响范围半径 |
-| `duration` | float | 3f | 持续时间（秒） |
+| `effectRadius` | float | 5f | 影响范围半径（实际范围由 SpellAOE_Range 缩放） |
+| `duration` | float | 3f | 持续时间（秒）（实际持续时间由 SpellAOE_Duration 决定） |
 | `tickInterval` | float | 0.5f | 伤害 tick 间隔（秒） |
-| `damagePerTick` | float | 10f | 每 tick 伤害 |
 | `groundIndicator` | GameObject | — | 地面指示器 Prefab（如圆形范围圈） |
 | `spawnOffset` | Vector3 | (0, 0, 0) | 发射位置偏移（世界坐标，相对于玩家位置） |
 
@@ -132,6 +131,19 @@ SpellR 地板持续范围技能，生成后不移动，在范围内持续检测�
 - 持续检测范围内所有敌人
 - 每隔 `tickInterval` 对范围内敌人造成一次伤害
 - 持续 `duration` 秒后自动销毁
+- **伤害数值全部来自 PlayerPropertyTemplate，不在模板 asset 中配置**
+
+### SpellR 范围缩放机制
+
+`effectRadius` 作为基础半径，实际生效范围由玩家属性缩放：
+
+```
+实际影响半径 = GroundAOE_SpellR.asset.effectRadius * PlayerPropertyTemplate.SpellAOE_Range
+```
+
+`duration` 由 `PlayerPropertyTemplate.SpellAOE_Duration` 决定，模板中的 `duration` 仅作为上限/默认值。
+
+这允许在不修改 .asset 的情况下，通过玩家升级/装备系统动态调整技能范围和持续时间。
 
 ### 代码定义
 
@@ -142,7 +154,7 @@ public class GroundAOEProjectileTemplate : ProjectileTemplate
     public float effectRadius = 5f;
     public float duration = 3f;
     public float tickInterval = 0.5f;
-    public float damagePerTick = 10f;
+    // 注意：伤害数值不在此处配置，全部来自 PlayerPropertyTemplate
     public GameObject groundIndicator;
     public Vector3 spawnOffset = Vector3.zero;
 
@@ -258,11 +270,11 @@ public class GroundAOEProjectile
     public float elapsed;
     public float duration;
     public float tickInterval;
-    public float damagePerTick;
     public GameObject indicatorObject;
     public DamageTemplate.SkillType skillType;
     public PlayerPropertyTemplate playerProp;
     public bool isActive;
+    // 伤害数值从 playerProp.SpellAOE_Damage_Base / SpellAOE_Damage_Multiplier 获取，不存在实例中
 }
 
 // 剑气实例
@@ -332,6 +344,7 @@ void SpawnFlyingProjectile(
 );
 
 // 地面AOE生成
+// 注意：duration 和 effectRadius 会结合 PlayerPropertyTemplate 中的 SpellAOE_Duration / SpellAOE_Range 缩放
 void SpawnGroundAOEProjectile(
     GroundAOEProjectileTemplate template,
     Vector3 spawnPosition,
@@ -360,6 +373,8 @@ void SpawnSlashProjectile(
 | 追踪 | 否 | 在 FlyingProjectile.Update 中每帧朝向目标计算 direction |
 | 弹射物限流 | ✅ 已有限制 | MAX_ACTIVE_PROJECTILES 常量控制 |
 | 防重复伤敌 | ✅ 已实现 | SlashProjectile.hitEnemies HashSet，同一波剑气不重复伤敌 |
+| SpellR 范围跟随 | 否 | 在 GroundAOEProjectile.Update 中每帧重新定位中心点跟随玩家 |
+| SpellR 区域边界伤害 | 否 | 在 UpdateGroundAOEProjectiles 中记录上帧敌人列表，新增/消失时额外触发 |
 
 ---
 
@@ -424,6 +439,21 @@ const float MAX_PROJECTILE_AGE = 10f;
 | 创建空物体 `ProjectileManager_System` | ✅ |
 | 挂载 `Global_ProjectileManager` 组件 | ✅ |
 | 配置对象池预热列表 | ✅ |
+
+### Phase 5：SpellR 地面持续范围系统 ✅ 设计方案
+
+| 内容 | 状态 |
+|------|------|
+| `PlayerSkillFunctions` 新增 `SpellR_Template`、`SpellR_SpawnDistance` Inspector 字段 | ✅ 方案已设计 |
+| `PlayerSkillFunctions` 新增 `OnSpellRHit()` Animation Event 入口 | ✅ 方案已设计 |
+| `PlayerSkillFunctions` 新增 `SpellR_LaunchLoop` 协程 | ✅ 方案已设计 |
+| `Global_ProjectileManager.SpawnGroundAOEProjectile` 接收 `SpellAOE_Range` 缩放 effectRadius | ✅ 方案已设计 |
+| `Global_ProjectileManager.UpdateGroundAOEProjectiles` 每 tick 使用 `OverlapSphere` 检测并触发 `OnSkillHit` | ✅ 方案已设计 |
+| `GroundAOE_SpellR.asset` 配置 `groundIndicator` 地面指示器 Prefab | ✅ 美术资产待确认 |
+| `PlayerPropertyTemplate.SpellAOE_Range` 实际影响范围 = `GroundAOE_SpellR.asset.effectRadius * SpellAOE_Range` | ✅ 方案已设计 |
+| `PlayerPropertyTemplate.SpellAOE_Duration` 控制区域持续时间 | ✅ 方案已设计 |
+
+> 注：`PlayerPropertyTemplate.SpellAOE_*` 字段（SpellAOE_Damage_Base、SpellAOE_Damage_Multiplier、SpellAOE_Range、SpellAOE_Duration 等）已存在于 `SO_PlayerPropertyTemplate.cs`，无需新增。
 
 ---
 
