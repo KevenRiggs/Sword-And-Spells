@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: PlayerProperty
   m_EditorClassIdentifier: Assembly-CSharp::PlayerPropertyTemplate
   Health_Max: 10000
-  Health_Current: 10000
+  Health_Current: 8000
   Physical_Strength: 50
   Physical_Defense: 10
   Magic_Strength: 50
@@ -22,9 +22,9 @@ MonoBehaviour:
   Stamina_Current: 100
   Mana_Max: 100
   Mana_Current: 100
-  Health_Regen: 0
-  Stamina_Regen: 2
-  Mana_Regen: 2
+  Health_Regen: 100
+  Stamina_Regen: 5
+  Mana_Regen: 5
   SwordSingle_Damage_Base: 100
   SwordSingle_Damage_Multiplier: 1
   SwordSingle_Stamina_Cost: 20

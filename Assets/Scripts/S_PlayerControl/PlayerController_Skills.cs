@@ -193,6 +193,13 @@ public class PlayerController_Skills : MonoBehaviour
             return;
         }
 
+        // 消耗检查：体力或法力不足则忽略
+        if (!CheckAndConsumeSkillCost(m_CurrentState, skillIndex))
+        {
+            SetDebugMessage($"[{GetStateName(m_CurrentState)}+{GetSkillKeyName(skillIndex)}] 资源不足！");
+            return;
+        }
+
         // 播放对应动画
         string stateName = GetAnimationStateName(m_CurrentState, skillIndex);
         if (m_Animator != null)
@@ -212,6 +219,68 @@ public class PlayerController_Skills : MonoBehaviour
         // 若配置了CD，则启动冷却
         if (cooldown > 0f)
             m_SkillTimers[slotIndex] = cooldown;
+    }
+
+    // ===================== 消耗检查与扣除 =====================
+    /// <summary>
+    /// 检查并扣除技能消耗的体力或法力
+    /// </summary>
+    /// <param name="state">当前选择状态</param>
+    /// <param name="skillIndex">技能索引 0=Q, 1=E, 2=R</param>
+    /// <returns>资源足够返回true，资源不足返回false</returns>
+    bool CheckAndConsumeSkillCost(SelectionState state, int skillIndex)
+    {
+        if (PlayerPropertyAsset == null)
+        {
+            Debug.LogWarning("PlayerController_Skills: PlayerPropertyAsset 未配置！");
+            return true; // 未配置时放行，避免卡死
+        }
+
+        float cost = GetSkillCost(state, skillIndex);
+        if (cost <= 0f)
+            return true; // 无消耗的技能直接放行
+
+        // LeftHold = 体力消耗，RightHold = 法力消耗
+        if (state == SelectionState.LeftHold)
+        {
+            if (PlayerPropertyAsset.Stamina_Current < cost)
+            {
+                Debug.Log($"[消耗检查] 体力不足！需要 {cost}，当前 {PlayerPropertyAsset.Stamina_Current}");
+                return false;
+            }
+            PlayerPropertyAsset.Stamina_Current -= cost;
+            Debug.Log($"[消耗检查] 扣除体力 {cost}，剩余 {PlayerPropertyAsset.Stamina_Current}");
+        }
+        else if (state == SelectionState.RightHold)
+        {
+            if (PlayerPropertyAsset.Mana_Current < cost)
+            {
+                Debug.Log($"[消耗检查] 法力不足！需要 {cost}，当前 {PlayerPropertyAsset.Mana_Current}");
+                return false;
+            }
+            PlayerPropertyAsset.Mana_Current -= cost;
+            Debug.Log($"[消耗检查] 扣除法力 {cost}，剩余 {PlayerPropertyAsset.Mana_Current}");
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 根据技能状态和索引获取消耗值
+    /// </summary>
+    float GetSkillCost(SelectionState state, int skillIndex)
+    {
+        if (PlayerPropertyAsset == null)
+            return 0f;
+
+        return skillIndex switch
+        {
+            // LeftHold = Sword技能，消耗体力
+            0 => state == SelectionState.LeftHold ? PlayerPropertyAsset.SwordSingle_Stamina_Cost : PlayerPropertyAsset.SpellSingle_Mana_Cost,
+            1 => state == SelectionState.LeftHold ? PlayerPropertyAsset.SwordBlock_Stamina_Cost : PlayerPropertyAsset.SpellBlock_Mana_Cost,
+            2 => state == SelectionState.LeftHold ? PlayerPropertyAsset.SwordAOE_Stamina_Cost : PlayerPropertyAsset.SpellAOE_Mana_Cost,
+            _ => 0f,
+        };
     }
 
     // ===================== 冷却更新 =====================
